@@ -77,3 +77,46 @@ def extract_features(url: str) -> dict:
 
 
 FEATURE_NAMES = list(extract_features("http://example.com").keys())
+def extract_domain_features(url: str) -> dict:
+    """Features from the HOSTNAME only. Ignores scheme, path and query."""
+    url = str(url).strip()
+    to_parse = url if re.match(r"^[a-zA-Z][a-zA-Z0-9+.\-]*://", url) else "http://" + url
+    try:
+        parsed = urlparse(to_parse)
+        host = (parsed.hostname or "").lower()
+        has_userinfo = int(parsed.username is not None)
+        has_port = int(parsed.port is not None)
+    except ValueError:
+        host, has_userinfo, has_port = "", 0, 0
+
+    if host.startswith("www."):  # avoid the "www" shortcut
+        host = host[4:]
+
+    ext = _extract(host)
+    domain, suffix = ext.domain, ext.suffix
+    sub_parts = [p for p in ext.subdomain.split(".") if p]
+    letters = sum(c.isalpha() for c in host)
+    digits = sum(c.isdigit() for c in host)
+    n = max(len(host), 1)
+
+    return {
+        "hostname_length": len(host),
+        "domain_length": len(domain),
+        "num_dots": host.count("."),
+        "num_hyphens": host.count("-"),
+        "num_hyphens_domain": domain.count("-"),
+        "num_digits": digits,
+        "digit_ratio": digits / n,
+        "letter_ratio": letters / n,
+        "has_ip": int(bool(IP_PATTERN.match(host))),
+        "has_userinfo": has_userinfo,
+        "has_port": has_port,
+        "num_subdomains": len(sub_parts),
+        "tld_length": len(suffix),
+        "domain_entropy": _entropy(domain),
+        "domain_has_digits": int(any(c.isdigit() for c in domain)),
+        "suspicious_word_count": sum(w in host for w in SUSPICIOUS_WORDS),
+    }
+
+
+DOMAIN_FEATURE_NAMES = list(extract_domain_features("http://example.com").keys())

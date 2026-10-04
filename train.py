@@ -5,10 +5,10 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
-from features import FEATURE_NAMES
+from features import DOMAIN_FEATURE_NAMES
 
 df = pd.read_csv("data/features.csv")
-X = df[FEATURE_NAMES]
+X = df[DOMAIN_FEATURE_NAMES]
 y = df["is_phishing"]  # 1 = phishing, 0 = legitimate
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -17,7 +17,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 models = {
     "RandomForest": RandomForestClassifier(
-        n_estimators=200, n_jobs=-1, random_state=42
+        n_estimators=200, min_samples_leaf=3, n_jobs=-1, random_state=42
     ),
     "XGBoost": XGBClassifier(
         n_estimators=300, max_depth=6, learning_rate=0.1,
@@ -43,13 +43,12 @@ for name, model in models.items():
 
 print(f"\nBest model: {best_name} (phishing F1 = {best_f1:.4f})")
 
-# Which features matter most?
-importances = pd.Series(best_model.feature_importances_, index=FEATURE_NAMES)
+importances = pd.Series(best_model.feature_importances_, index=DOMAIN_FEATURE_NAMES)
 print("\nTop 10 features:\n", importances.sort_values(ascending=False).head(10).round(4))
 
-joblib.dump({"model": best_model, "features": FEATURE_NAMES}, "models/phishing_model.pkl")
-print("\nTop 10 features:\n", importances.sort_values(ascending=False).head(10).round(4))
-
-joblib.dump({"model": best_model, "features": FEATURE_NAMES}, "models/phishing_model.pkl", compress=3)
+joblib.dump(
+    {"model": best_model, "features": DOMAIN_FEATURE_NAMES},
+    "models/phishing_model.pkl",
+    compress=3,
+)
 print("\nSaved models/phishing_model.pkl")
-
